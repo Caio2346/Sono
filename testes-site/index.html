@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A Ciência do Sono</title>
+
+    <style>
+      /* =======================================
+       1. Variáveis e Reset
+       ======================================= */
+      :root {
+        --bg-dark: #020617;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent-blue: #38bdf8;
+        --accent-gold: #fbbf24;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(
+            circle at 15% 50%,
+            rgba(56, 189, 248, 0.04),
+            transparent 25%
+          ),
+          radial-gradient(
+            circle at 85% 30%,
+            rgba(251, 191, 36, 0.04),
+            transparent 25%
+          );
+      }
+
+      /* Barra de Progresso Neon */
+      .progress-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          var(--accent-blue),
+          var(--accent-gold)
+        );
+        width: 0%;
+        z-index: 9999;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+      }
+
+      /* =======================================
+       2. Layout Split-Screen com Sticky
+       ======================================= */
+      .section-container {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .text-col {
+        padding: 10vh 8vw 20vh 8vw;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 120vh;
+      }
+
+      .img-col {
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .step-number {
+        font-size: 10rem;
+        font-weight: 900;
+        position: absolute;
+        top: 5vh;
+        left: 5vw;
+        opacity: 0.03;
+        z-index: -1;
+        background: linear-gradient(to bottom, #fff, transparent);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .badge {
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        font-size: 0.8rem;
+        color: var(--accent-blue);
+        margin-bottom: 1rem;
+        display: inline-block;
+        font-weight: 700;
+      }
+
+      h2 {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        line-height: 1.1;
+        margin-bottom: 2rem;
+        letter-spacing: -1px;
+      }
+
+      .glow-text {
+        background: linear-gradient(
+          45deg,
+          var(--text-main),
+          var(--accent-gold)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      p {
+        font-size: 1.2rem;
+        line-height: 1.8;
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+        max-width: 600px;
+      }
+
+      ul.premium-list {
+        list-style: none;
+        margin-top: 1rem;
+      }
+
+      ul.premium-list li {
+        font-size: 1.15rem;
+        color: var(--text-muted);
+        margin-bottom: 1.2rem;
+        position: relative;
+        padding-left: 2rem;
+        line-height: 1.6;
+      }
+
+      ul.premium-list li::before {
+        content: "➝";
+        position: absolute;
+        left: 0;
+        color: var(--accent-blue);
+        font-weight: bold;
+      }
+
+      .image-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 700px;
+        border-radius: 24px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+
+      .image-wrapper img {
+        width: 100%;
+        height: auto;
+        border-radius: 16px;
+        transform: translateZ(30px);
+      }
+
+      /* =======================================
+       3. A MÁGICA DO APARECIMENTO/DESAPARECIMENTO
+       ======================================= */
+
+      /* Textos (Efeito de Blur e Scale) */
+      .fade-up {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+        filter: blur(5px);
+        /* Sem delay quando sai da tela para sumir rápido */
+        transition:
+          opacity 0.5s ease,
+          transform 0.5s ease,
+          filter 0.5s ease;
+        will-change: opacity, transform, filter;
+      }
+
+      .fade-up.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+      }
+
+      /* Imagens (Efeito Fotográfico) */
+      .fade-opacity {
+        opacity: 0;
+        filter: blur(15px);
+        transition:
+          opacity 0.8s ease,
+          filter 0.8s ease;
+        will-change: opacity, filter;
+      }
+
+      .fade-opacity.visible {
+        opacity: 1;
+        filter: blur(0);
+      }
+
+      /* Adiciona cascata SOMENTE quando está entrando na tela */
+      .fade-up.visible.delay-1 {
+        transition-delay: 0.1s;
+      }
+      .fade-up.visible.delay-2 {
+        transition-delay: 0.2s;
+      }
+      .fade-up.visible.delay-3 {
+        transition-delay: 0.3s;
+      }
+
+      /* =======================================
+       4. Responsividade Avançada (Desktop)
+       ======================================= */
+      @media (min-width: 1024px) {
+        .section-container {
+          flex-direction: row;
+        }
+        .text-col,
+        .img-col {
+          width: 50%;
+        }
+
+        .img-col {
+          position: sticky;
+          top: 0;
+          height: 100vh;
+        }
+
+        .section-container.reverse .text-col {
+          order: 2;
+        }
+        .section-container.reverse .img-col {
+          order: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- TÓPICO 1: O PAPEL BIOLÓGICO -->
+    <section class="section-container">
+      <div class="text-col">
+        <span class="step-number">01</span>
+        <span class="badge fade-up">A Ciência Base</span>
+        <h2 class="fade-up delay-1">
+          O Papel <span class="glow-text">Biológico</span> do Sono
+        </h2>
+        <p class="fade-up delay-2">
+          O sono atua ativamente na reparação celular e tecidual, incluindo a
+          liberação de hormônio do crescimento (GH) para reparo muscular e ósseo
+          e a eliminação de toxinas celulares[cite: 7].
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            O "Glymphatic System" entra em ação eliminando resíduos cerebrais
+            durante a noite[cite: 7].
+          </li>
+          <li>
+            Promove a consolidação da memória e a facilitação de insights e
+            criatividade[cite: 7].
+          </li>
+          <li>
+            Exerce um papel vital na regulação emocional, ajudando no
+            processamento de experiências emocionais difíceis e na redução do
+            estresse[cite: 7].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <!-- Adicionada a classe fade-opacity para sumir/aparecer -->
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem1.jpg" alt="Papel Biológico" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TÓPICO 2: IMPACTO NO TRABALHO -->
+    <section class="section-container reverse">
+      <div class="text-col">
+        <span class="step-number">02</span>
+        <span class="badge fade-up">Saúde Ocupacional</span>
+        <h2 class="fade-up delay-1">
+          O Impacto Direto no
+          <span class="glow-text">Ambiente Profissional</span>
+        </h2>
+        <p class="fade-up delay-2">
+          A baixa produtividade gera perdas para a empresa com milhões em custos
+          indiretos diários[cite: 8]. O cérebro sem descanso torna-se um risco
+          operacional crônico.
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            Raciocínio prejudicado leva a decisões apressadas e de risco, com
+            perda da clareza mental e dificuldade em resolver problemas
+            complexos[cite: 8].
+          </li>
+          <li>
+            Instabilidade emocional gera mais irritabilidade, estresse e
+            conflitos interpessoais, com piora na comunicação[cite: 8].
+          </li>
+          <li>
+            Falta de criatividade, bloqueio de inovação e descuidos com
+            protocolos de segurança causam maiores riscos de acidentes de
+            trabalho[cite: 8].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem2.jpg" alt="Impacto no Trabalho" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TÓPICO 3: HIGIENE DO SONO -->
+    <section class="section-container">
+      <div class="text-col">
+        <span class="step-number">03</span>
+        <span class="badge fade-up">Prática</span>
+        <h2 class="fade-up delay-1">
+          <span class="glow-text">Higiene</span> do Sono
+        </h2>
+        <p class="fade-up delay-2">
+          Construir uma noite reparadora, com a duração recomendada de 8 horas
+          para todo o ciclo, exige intencionalidade e planejamento do
+          ambiente[cite: 9].
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            Mantenha um ambiente de sono confortável, com um quarto escuro,
+            silencioso e temperatura agradável e fresca (em torno de 20°C)[cite:
+            9].
+          </li>
+          <li>
+            Implemente a desconexão digital evitando telas (celular, tablet, TV)
+            antes de dormir, o que reduz a exposição à luz azul e acalma a
+            mente[cite: 9].
+          </li>
+          <li>
+            Adote uma rotina regular, com horário fixo para deitar e acordar, e
+            invista no relaxamento antes de dormir com banho morno ou
+            meditação[cite: 9].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem3.jpg" alt="Higiene do Sono" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TÓPICO 4: GANCHO DE ABERTURA/ENCERRAMENTO -->
+    <section class="section-container reverse">
+      <div class="text-col">
+        <span class="step-number">04</span>
+        <span class="badge fade-up">Estratégia</span>
+        <h2 class="fade-up delay-1">
+          O <span class="glow-text">Gancho</span> Profissional
+        </h2>
+        <p class="fade-up delay-2">
+          Saber comunicar a importância do descanso é essencial. É preciso
+          conquistar a audiência com o descanso ao iniciar o assunto[cite: 10].
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            Inicie criando empatia com o estresse do cansaço e apresente o sono
+            como a chave para a alta performance e a solução viável[cite: 10].
+          </li>
+          <li>
+            Encerre consolidando a mensagem e resumindo como o sono restaurador
+            fortalece os pilares do sucesso para ter metas atingidas[cite: 10].
+          </li>
+          <li>
+            Transforme o descanso em um diferencial competitivo sustentável e
+            convide para uma chamada à ação (rotinas de higiene)[cite: 10].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem4.jpg" alt="Gancho Profissional" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TÓPICO 5: FASES DO SONO -->
+    <section class="section-container">
+      <div class="text-col">
+        <span class="step-number">05</span>
+        <span class="badge fade-up">A Engenharia</span>
+        <h2 class="fade-up delay-1">
+          As <span class="glow-text">Fases</span> do Sono
+        </h2>
+        <p class="fade-up delay-2">
+          Um ciclo humano típico dura de 90 a 110 minutos. Ao longo da noite, o
+          corpo orquestra a reparação através de estágios específicos[cite: 11]:
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            <strong>Sono Leve (Estágio N1/N2):</strong> Transição vigília-sono,
+            o corpo relaxa, e os batimentos cardíacos e a respiração
+            diminuem[cite: 11].
+          </li>
+          <li>
+            <strong>Sono Profundo (Estágio N3/N4):</strong> Predomínio de ondas
+            Delta lentas; é onde ocorre o relaxamento muscular profundo,
+            crescimento celular e a reparação tecidual[cite: 11].
+          </li>
+          <li>
+            <strong>Sono REM:</strong> Ondas rápidas com intensa atividade
+            cerebral e sonhos; ocorre o processamento emocional e cognitivo
+            profundo[cite: 11].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem5.jpg" alt="Fases do Sono" />
+        </div>
+      </div>
+    </section>
+
+    <!-- TÓPICO 6: DADOS E ESTATÍSTICAS -->
+    <section class="section-container reverse">
+      <div class="text-col">
+        <span class="step-number">06</span>
+        <span class="badge fade-up">Métricas</span>
+        <h2 class="fade-up delay-1">
+          Dados e <span class="glow-text">Estatísticas</span>
+        </h2>
+        <p class="fade-up delay-2">
+          A falta de diagnóstico adequado gera uma epidemia invisível. A
+          prevalência de insônia é alarmante, atingindo 30% em adultos[cite:
+          12].
+        </p>
+        <ul class="premium-list fade-up delay-3">
+          <li>
+            O impacto cognitivo é massivo: uma única noite mal dormida pode
+            causar redução de 40% na concentração[cite: 12].
+          </li>
+          <li>
+            A ausência de descanso gera perdas econômicas e de produtividade,
+            com bilhões de dólares perdidos e aumento de absenteísmo (+5 dias
+            por ano por pessoa)[cite: 12].
+          </li>
+          <li>
+            Aplicar soluções e melhorias traz benefícios claros: melhoria de 20%
+            na consolidação da memória e regulação do humor[cite: 12].
+          </li>
+        </ul>
+      </div>
+      <div class="img-col">
+        <div class="image-wrapper tilt-card fade-opacity">
+          <img src="img/iamgem6.jpg" alt="Dados e Estatísticas" />
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================
+       LÓGICA JAVASCRIPT (Zona de Foco + Tilt 3D)
+       ======================================= -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // 1. Barra de progresso de rolagem
+        const progressBar = document.getElementById("progressBar");
+        window.addEventListener("scroll", () => {
+          const scrollTop =
+            document.documentElement.scrollTop || document.body.scrollTop;
+          const scrollHeight =
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight;
+          const scrolled = (scrollTop / scrollHeight) * 100;
+          progressBar.style.width = scrolled + "%";
+        });
+
+        // 2. A MÁGICA: Intersection Observer (Focus Zone)
+        const fadeElements = document.querySelectorAll(
+          ".fade-up, .fade-opacity",
+        );
+
+        const observerOptions = {
+          root: null,
+          // Cria margens "invisíveis" no topo e na base.
+          // Os elementos só são "vistos" no centro da tela.
+          rootMargin: "-15% 0px -15% 0px",
+          threshold: 0,
+        };
+
+        const scrollObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // Entrou na zona central: Adiciona 'visible', ele aparece.
+              entry.target.classList.add("visible");
+            } else {
+              // Saiu da zona central (tanto pra cima quanto pra baixo): Remove 'visible', ele some.
+              entry.target.classList.remove("visible");
+            }
+          });
+        }, observerOptions);
+
+        fadeElements.forEach((el) => scrollObserver.observe(el));
+
+        // 3. Efeito 3D (Tilt) nas Imagens usando Movimento do Mouse
+        const cards = document.querySelectorAll(".tilt-card");
+
+        cards.forEach((card) => {
+          card.addEventListener("mousemove", (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            const rotateX = ((y - centerY) / centerY) * -8;
+            const rotateY = ((x - centerX) / centerX) * 8;
+
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            card.style.transition = "transform 0.1s ease-out";
+          });
+
+          card.addEventListener("mouseleave", () => {
+            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            card.style.transition =
+              "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)";
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
